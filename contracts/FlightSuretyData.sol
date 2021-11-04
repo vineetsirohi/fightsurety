@@ -13,16 +13,29 @@ contract FlightSuretyData {
     address private contractOwner; // Account used to deploy contract
     bool private operational = true; // Blocks all state changes throughout the contract if false
 
+    // Airlines
+    struct Airline {
+        bool isRegistered;
+        uint256 fundsContributed;
+    }
+    uint256 registeredAirlinesCount = 0;
+    uint256 fundedAirlinesCount = 0;
+    mapping(address => Airline) private airlines;
+
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
+
+    event AirlineRegistered(address airline);
+    event AirlineReachedFundingThreshold(address airline);
 
     /**
      * @dev Constructor
      *      The deploying account becomes contractOwner
      */
-    constructor() {
+    constructor(address airlineAddress) {
         contractOwner = msg.sender;
+        airlines[airlineAddress] = Airline(true, 0);
     }
 
     /********************************************************************************************/
@@ -47,6 +60,23 @@ contract FlightSuretyData {
      */
     modifier requireContractOwner() {
         require(msg.sender == contractOwner, "Caller is not contract owner");
+        _;
+    }
+
+    // airline modifiers
+    modifier requireNotAlreadyRegistered(address airline) {
+        require(
+            !airlines[airline].isRegistered,
+            "Airline is already registered"
+        );
+        _;
+    }
+
+    modifier requireFunded() {
+        require(
+            airlines[msg.sender].fundsContributed >= 10 ether,
+            "Airline is not sufficiently contributed to the funds"
+        );
         _;
     }
 
@@ -81,7 +111,52 @@ contract FlightSuretyData {
      *      Can only be called from FlightSuretyApp contract
      *
      */
-    function registerAirline() external pure {}
+    function registerAirline(address airline)
+        external
+        requireIsOperational
+        requireNotAlreadyRegistered(airline)
+        requireFunded
+    {
+        airlines[airline] = Airline(true, 0);
+        registeredAirlinesCount += 1;
+        emit AirlineRegistered(airline);
+    }
+
+    function isAirlineRegistered(address airline)
+        external
+        view
+        returns (bool registered)
+    {
+        return airlines[airline].isRegistered;
+    }
+
+    function hasAirlineFunded(address airline)
+        external
+        view
+        returns (bool funded)
+    {
+        return airlines[airline].fundsContributed >= 10 ether;
+    }
+
+    function getRegisteredAirlinesCount()
+        external
+        view
+        returns (uint256 airlinesCount)
+    {
+        return registeredAirlinesCount;
+    }
+
+    function fundAirline(uint256 amount)
+        external
+        requireIsOperational
+        requireNotAlreadyRegistered(msg.sender)
+    {
+        airlines[msg.sender].fundsContributed += amount;
+
+        if (airlines[msg.sender].fundsContributed >= 10 ether) {
+            emit AirlineReachedFundingThreshold(msg.sender);
+        }
+    }
 
     /**
      * @dev Buy insurance for a flight
