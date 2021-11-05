@@ -18,8 +18,8 @@ contract FlightSuretyData {
         bool isRegistered;
         uint256 fundsContributed;
     }
-    uint256 registeredAirlinesCount = 0;
-    uint256 fundedAirlinesCount = 0;
+    uint256 registeredAirlinesCount = 1;
+    uint256 fundedAirlinesCount = 1;
     mapping(address => Airline) private airlines;
 
     /********************************************************************************************/
@@ -72,6 +72,16 @@ contract FlightSuretyData {
         _;
     }
 
+    modifier requireRegistered() {
+        require(
+            airlines[msg.sender].isRegistered,
+            "Airline is not registered"
+        );
+        _;
+    }
+
+    
+
     modifier requireFunded() {
         require(
             airlines[msg.sender].fundsContributed >= 10 ether,
@@ -122,34 +132,27 @@ contract FlightSuretyData {
         emit AirlineRegistered(airline);
     }
 
-    function isAirlineRegistered(address airline)
-        external
-        view
-        returns (bool registered)
-    {
+    function isAirlineRegistered(address airline) external view returns (bool) {
         return airlines[airline].isRegistered;
     }
 
     function hasAirlineFunded(address airline)
         external
         view
-        returns (bool funded)
+        returns (bool, uint256)
     {
-        return airlines[airline].fundsContributed >= 10 ether;
+        uint256 funds = airlines[airline].fundsContributed;
+        return (funds >= 10 ether, funds);
     }
 
-    function getRegisteredAirlinesCount()
-        external
-        view
-        returns (uint256 airlinesCount)
-    {
+    function getRegisteredAirlinesCount() external view returns (uint256) {
         return registeredAirlinesCount;
     }
 
     function fundAirline(uint256 amount)
         external
         requireIsOperational
-        requireNotAlreadyRegistered(msg.sender)
+        requireRegistered
     {
         airlines[msg.sender].fundsContributed += amount;
 
@@ -201,4 +204,7 @@ contract FlightSuretyData {
     receive() external payable {
         // custom function code
     }
+
+
+    
 }

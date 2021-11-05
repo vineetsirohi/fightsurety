@@ -96,15 +96,16 @@ contract FlightSuretyApp {
     // airline modifiers
     modifier requireNotAlreadyRegistered(address airline) {
         require(
-            flightSuretyData.isAirlineRegistered(airline),
+            !flightSuretyData.isAirlineRegistered(airline),
             "Airline is already registered"
         );
         _;
     }
 
     modifier requireFunded(address airline) {
+        (bool funded, uint256 amount) = flightSuretyData.hasAirlineFunded(airline);
         require(
-            flightSuretyData.hasAirlineFunded(airline),
+            funded,
             "Airline has not sufficiently contributed to the funds"
         );
         _;
@@ -122,12 +123,12 @@ contract FlightSuretyApp {
         external
         requireIsOperational
         requireNotAlreadyRegistered(airline)
-        requireFunded(airline)
+        requireFunded(msg.sender)
         returns (bool success, uint256 votes)
     {
         if (flightSuretyData.getRegisteredAirlinesCount() <= 4) {
             flightSuretyData.registerAirline(airline);
-            return (success, 0);
+            return (true, 33);
         } else {
             // Check consensus if more than or equal to 4 registered airlines
 
@@ -162,6 +163,10 @@ contract FlightSuretyApp {
 
     function fundAirline(uint256 amount) external {
         flightSuretyData.fundAirline(amount);
+    }
+
+    function isAirline(address airline) external view returns (bool){
+        return flightSuretyData.isAirlineRegistered(airline);
     }
 
     /**
