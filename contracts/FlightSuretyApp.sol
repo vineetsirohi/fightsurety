@@ -42,6 +42,13 @@ contract FlightSuretyApp {
     mapping(bytes32 => Flight) private flights;
 
     /********************************************************************************************/
+    /*                                       EVENT DEFINITIONS                                  */
+    /********************************************************************************************/
+
+    event AirlineRegistered(address airline);
+    event AirlineFunded(address airline, uint256 funds);
+
+    /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
 
@@ -125,8 +132,13 @@ contract FlightSuretyApp {
         requireFunded(msg.sender)
         returns (bool success, uint256 votes)
     {
-        if (flightSuretyData.getRegisteredAirlinesCount() <= 4) {
-            flightSuretyData.registerAirline(airline);
+        if (flightSuretyData.getRegisteredAirlinesCount() < 4) {
+            flightSuretyData.registerAirline(airline, msg.sender);
+
+            if (flightSuretyData.isAirlineRegistered(airline)) {
+                emit AirlineRegistered(airline);
+            }
+
             return (true, 33);
         } else {
             // Check consensus if more than or equal to 4 registered airlines
@@ -153,7 +165,12 @@ contract FlightSuretyApp {
                     flightSuretyData.getRegisteredAirlinesCount()
                 ) >= 50
             ) {
-                flightSuretyData.registerAirline(airline);
+                flightSuretyData.registerAirline(airline, msg.sender);
+
+                if (flightSuretyData.isAirlineRegistered(airline)) {
+                    emit AirlineRegistered(airline);
+                }
+
                 return (true, airlinesForRegistration[airline].length);
             }
             return (false, airlinesForRegistration[airline].length);
@@ -162,6 +179,13 @@ contract FlightSuretyApp {
 
     function fundAirline(uint256 amount) external {
         flightSuretyData.fundAirline(msg.sender, amount);
+
+        if (flightSuretyData.hasAirlineFunded(msg.sender)) {
+            emit AirlineFunded(
+                msg.sender,
+                flightSuretyData.airlineContribution(msg.sender)
+            );
+        }
     }
 
     function isAirline(address airline) external view returns (bool) {

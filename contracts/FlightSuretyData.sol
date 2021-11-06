@@ -26,9 +26,6 @@ contract FlightSuretyData {
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineRegistered(address airline);
-    event AirlineReachedFundingThreshold(address airline, uint256 funds);
-
     /**
      * @dev Constructor
      *      The deploying account becomes contractOwner
@@ -77,9 +74,9 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier requireFunded() {
+    modifier requireFunded(address airline) {
         require(
-            airlines[msg.sender].fundsContributed >= 10 ether,
+            airlines[airline].fundsContributed >= 10 ether,
             "Airline is not sufficiently contributed to the funds"
         );
         _;
@@ -116,14 +113,14 @@ contract FlightSuretyData {
      *      Can only be called from FlightSuretyApp contract
      *
      */
-    function registerAirline(address airline)
+    function registerAirline(address airline, address registeringAirline)
         external
         requireIsOperational
         requireNotAlreadyRegistered(airline)
+        requireFunded(registeringAirline)
     {
         airlines[airline] = Airline(true, 0);
         registeredAirlinesCount += 1;
-        emit AirlineRegistered(airline);
     }
 
     function isAirlineRegistered(address airline) external view returns (bool) {
@@ -135,6 +132,14 @@ contract FlightSuretyData {
         return funds >= (10 ether);
     }
 
+    function airlineContribution(address airline)
+        external
+        view
+        returns (uint256 amount)
+    {
+        return airlines[airline].fundsContributed;
+    }
+
     function getRegisteredAirlinesCount() external view returns (uint256) {
         return registeredAirlinesCount;
     }
@@ -142,16 +147,9 @@ contract FlightSuretyData {
     function fundAirline(address airline, uint256 amount)
         external
         requireIsOperational
-        
+        requireRegistered(airline)
     {
         airlines[airline].fundsContributed += amount;
-
-        if (airlines[airline].fundsContributed >= 10 ether) {
-            emit AirlineReachedFundingThreshold(
-                airline,
-                airlines[airline].fundsContributed
-            );
-        }
     }
 
     /**
