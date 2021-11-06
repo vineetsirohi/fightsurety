@@ -123,7 +123,9 @@ contract('Flight Surety Tests', async (accounts) => {
 
         // EVENTS
         await expectEvent(fundResult, "AirlineFunded");
-        await expectEvent(registerResult, "AirlineRegistered");
+        await expectEvent(registerResult, "AirlineRegistered", {
+            count: "2"
+        });
     });
 
     it('Registration of fifth and subsequent airlines requires multi-party consensus of 50% of registered airlines', async () => {
@@ -174,6 +176,8 @@ contract('Flight Surety Tests', async (accounts) => {
         assert.equal(await config.flightSuretyApp.isAirline.call(fifthAirline), true, "Fifth airline should be registered");
 
         // EVENTS
-        await expectEvent(fifthRegistration, "AirlineRegistered");
+        await expectEvent(fifthRegistration, "AirlineRegistered", {
+            count: "5"
+        });
     });
 });

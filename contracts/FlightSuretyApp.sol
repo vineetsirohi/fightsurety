@@ -45,7 +45,7 @@ contract FlightSuretyApp {
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineRegistered(address airline);
+    event AirlineRegistered(address airline, uint256 count);
     event AirlineFunded(address airline, uint256 funds);
 
     /********************************************************************************************/
@@ -136,7 +136,7 @@ contract FlightSuretyApp {
             flightSuretyData.registerAirline(airline, msg.sender);
 
             if (flightSuretyData.isAirlineRegistered(airline)) {
-                emit AirlineRegistered(airline);
+                emit AirlineRegistered(airline, flightSuretyData.getRegisteredAirlinesCount());
             }
 
             return (true, 33);
@@ -168,7 +168,7 @@ contract FlightSuretyApp {
                 flightSuretyData.registerAirline(airline, msg.sender);
 
                 if (flightSuretyData.isAirlineRegistered(airline)) {
-                    emit AirlineRegistered(airline);
+                    emit AirlineRegistered(airline, flightSuretyData.getRegisteredAirlinesCount());
                 }
 
                 return (true, airlinesForRegistration[airline].length);
