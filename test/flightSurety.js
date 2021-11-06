@@ -102,21 +102,18 @@ contract('Flight Surety Tests', async (accounts) => {
         let newAirline = accounts[2];
 
         // ACT
+        // console.log("First airline: " + config.firstAirline);
 
         assert.equal(await config.flightSuretyApp.isAirline.call(config.firstAirline), true, "Airline should be registered");
 
         let amount = web3.utils.toWei('10', 'ether');
         await config.flightSuretyApp.fundAirline(amount, { from: config.firstAirline });
 
-
-
-        let fundedResult = await config.flightSuretyData.hasAirlineFunded.call(config.firstAirline);
-        assert.equal(fundedResult.funded, 10, "Airline should be funded " + JSON.stringify(fundedResult));
-        assert.equal(fundedResult.amount, true, "Airline should be funded");
-
-        let registerAirlineResult = await config.flightSuretyApp.registerAirline(newAirline, { from: config.firstAirline });
-        assert.equal(registerAirlineResult, 32, "Airline should be able to register another airline if it has provided funding");
-
+        let fundedResult = await config.flightSuretyApp.isFunded.call(config.firstAirline);
+        assert.equal(fundedResult, true, "Airline should be funded ");
+        
+        await config.flightSuretyApp.registerAirline(newAirline, { from: config.firstAirline });
+        
         let result = await config.flightSuretyApp.isAirline.call(newAirline);
 
         // ASSERT

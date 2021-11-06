@@ -27,7 +27,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     event AirlineRegistered(address airline);
-    event AirlineReachedFundingThreshold(address airline);
+    event AirlineReachedFundingThreshold(address airline, uint256 funds);
 
     /**
      * @dev Constructor
@@ -72,15 +72,10 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier requireRegistered() {
-        require(
-            airlines[msg.sender].isRegistered,
-            "Airline is not registered"
-        );
+    modifier requireRegistered(address airline) {
+        require(airlines[airline].isRegistered, "Airline is not registered");
         _;
     }
-
-    
 
     modifier requireFunded() {
         require(
@@ -125,7 +120,6 @@ contract FlightSuretyData {
         external
         requireIsOperational
         requireNotAlreadyRegistered(airline)
-        requireFunded
     {
         airlines[airline] = Airline(true, 0);
         registeredAirlinesCount += 1;
@@ -136,28 +130,27 @@ contract FlightSuretyData {
         return airlines[airline].isRegistered;
     }
 
-    function hasAirlineFunded(address airline)
-        external
-        view
-        returns (bool, uint256)
-    {
+    function hasAirlineFunded(address airline) external view returns (bool) {
         uint256 funds = airlines[airline].fundsContributed;
-        return (funds >= 10 ether, funds);
+        return funds >= (10 ether);
     }
 
     function getRegisteredAirlinesCount() external view returns (uint256) {
         return registeredAirlinesCount;
     }
 
-    function fundAirline(uint256 amount)
+    function fundAirline(address airline, uint256 amount)
         external
         requireIsOperational
-        requireRegistered
+        
     {
-        airlines[msg.sender].fundsContributed += amount;
+        airlines[airline].fundsContributed += amount;
 
-        if (airlines[msg.sender].fundsContributed >= 10 ether) {
-            emit AirlineReachedFundingThreshold(msg.sender);
+        if (airlines[airline].fundsContributed >= 10 ether) {
+            emit AirlineReachedFundingThreshold(
+                airline,
+                airlines[airline].fundsContributed
+            );
         }
     }
 
@@ -204,7 +197,4 @@ contract FlightSuretyData {
     receive() external payable {
         // custom function code
     }
-
-
-    
 }

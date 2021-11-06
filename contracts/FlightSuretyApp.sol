@@ -103,9 +103,8 @@ contract FlightSuretyApp {
     }
 
     modifier requireFunded(address airline) {
-        (bool funded, uint256 amount) = flightSuretyData.hasAirlineFunded(airline);
         require(
-            funded,
+            flightSuretyData.hasAirlineFunded(airline),
             "Airline has not sufficiently contributed to the funds"
         );
         _;
@@ -162,11 +161,15 @@ contract FlightSuretyApp {
     }
 
     function fundAirline(uint256 amount) external {
-        flightSuretyData.fundAirline(amount);
+        flightSuretyData.fundAirline(msg.sender, amount);
     }
 
-    function isAirline(address airline) external view returns (bool){
+    function isAirline(address airline) external view returns (bool) {
         return flightSuretyData.isAirlineRegistered(airline);
+    }
+
+    function isFunded(address airline) external view returns (bool) {
+        return flightSuretyData.hasAirlineFunded(airline);
     }
 
     /**
