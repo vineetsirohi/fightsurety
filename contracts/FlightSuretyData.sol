@@ -13,14 +13,41 @@ contract FlightSuretyData {
     address private contractOwner; // Account used to deploy contract
     bool private operational = true; // Blocks all state changes throughout the contract if false
 
+    mapping(address => bool) private authorizedCallers; // App contract addresses authorized to call this data contract
+
     // Airlines
     struct Airline {
         bool isRegistered;
-        uint256 fundsContributed;
+        uint256 funds;
     }
     uint256 registeredAirlinesCount = 1;
     uint256 fundedAirlinesCount = 1;
     mapping(address => Airline) private airlines;
+
+    // Flights
+    struct Flight {
+        address airline;
+        string flightNumber;
+        uint256 departureTime;
+        string departureLoc;
+        string arrivalLoc;
+        uint8 statusCode;
+    }
+    mapping(bytes32 => Flight) public flights;
+    bytes32[] public registeredFlights;
+
+    // Insurance
+    struct FlightInsurance {
+        address passenger;
+        uint256 amount;
+        bool isRefunded;
+    }
+
+    // Flight Insurance
+    mapping(bytes32 => FlightInsurance[]) public flightInsurances;
+
+    // Passenger Insurance Claims
+    mapping(address => uint256) public claims;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -76,8 +103,16 @@ contract FlightSuretyData {
 
     modifier requireFunded(address airline) {
         require(
-            airlines[airline].fundsContributed >= 10 ether,
+            airlines[airline].funds >= 10 ether,
             "Airline is not sufficiently contributed to the funds"
+        );
+        _;
+    }
+
+    modifier requireAuthorizedCaller() {
+        require(
+            authorizedCallers[msg.sender],
+            "Calling contract is not authorized to access data"
         );
         _;
     }
@@ -108,16 +143,30 @@ contract FlightSuretyData {
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
 
+    function authorizeCaller(address contractAddress)
+        external
+        requireContractOwner
+    {
+        authorizedCallers[contractAddress] = true;
+    }
+
+    function deauthorizeContract(address contractAddress)
+        external
+        requireContractOwner
+    {
+        delete authorizedCallers[contractAddress];
+    }
+
     /**
      * @dev Add an airline to the registration queue
      *      Can only be called from FlightSuretyApp contract
      *
      */
-    function registerAirline(address airline, address registeringAirline)
+    function registerAirline(address airline)
         external
         requireIsOperational
+        requireAuthorizedCaller
         requireNotAlreadyRegistered(airline)
-        requireFunded(registeringAirline)
     {
         airlines[airline] = Airline(true, 0);
         registeredAirlinesCount += 1;
@@ -127,29 +176,21 @@ contract FlightSuretyData {
         return airlines[airline].isRegistered;
     }
 
-    function hasAirlineFunded(address airline) external view returns (bool) {
-        uint256 funds = airlines[airline].fundsContributed;
+    function isFunded(address airline) external view returns (bool) {
+        uint256 funds = airlines[airline].funds;
         return funds >= (10 ether);
     }
 
-    function airlineContribution(address airline)
+    function getFunds(address airline)
         external
         view
         returns (uint256 amount)
     {
-        return airlines[airline].fundsContributed;
+        return airlines[airline].funds;
     }
 
     function getRegisteredAirlinesCount() external view returns (uint256) {
         return registeredAirlinesCount;
-    }
-
-    function fundAirline(address airline, uint256 amount)
-        external
-        requireIsOperational
-        requireRegistered(airline)
-    {
-        airlines[airline].fundsContributed += amount;
     }
 
     /**
@@ -174,7 +215,14 @@ contract FlightSuretyData {
      *      resulting in insurance payouts, the contract should be self-sustaining
      *
      */
-    function fund() public payable {}
+    function fund(address airline, uint256 amount)
+        public
+        payable
+        requireIsOperational
+        requireRegistered(airline)
+    {
+        airlines[airline].funds += amount;
+    }
 
     function getFlightKey(
         address airline,
@@ -189,7 +237,7 @@ contract FlightSuretyData {
      *
      */
     fallback() external payable {
-        fund();
+        fund(msg.sender, msg.value);
     }
 
     receive() external payable {

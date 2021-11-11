@@ -109,17 +109,20 @@ contract FlightSuretyApp {
         _;
     }
 
-    modifier requireFunded(address airline) {
-        require(
-            flightSuretyData.hasAirlineFunded(airline),
-            "Airline has not sufficiently contributed to the funds"
-        );
-        _;
-    }
+    // modifier requireFunded(address airline) {
+    //     require(
+    //         flightSuretyData.isFunded(airline),
+    //         "Airline has not sufficiently contributed to the funds"
+    //     );
+    //     _;
+    // }
 
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
+    function isAirline(address airline) external view returns (bool) {
+        return flightSuretyData.isAirlineRegistered(airline);
+    }
 
     /**
      * @dev Add an airline to the registration queue
@@ -129,14 +132,16 @@ contract FlightSuretyApp {
         external
         requireIsOperational
         requireNotAlreadyRegistered(airline)
-        requireFunded(msg.sender)
         returns (bool success, uint256 votes)
     {
         if (flightSuretyData.getRegisteredAirlinesCount() < 4) {
-            flightSuretyData.registerAirline(airline, msg.sender);
+            flightSuretyData.registerAirline(airline);
 
             if (flightSuretyData.isAirlineRegistered(airline)) {
-                emit AirlineRegistered(airline, flightSuretyData.getRegisteredAirlinesCount());
+                emit AirlineRegistered(
+                    airline,
+                    flightSuretyData.getRegisteredAirlinesCount()
+                );
             }
 
             return (true, 33);
@@ -165,10 +170,13 @@ contract FlightSuretyApp {
                     flightSuretyData.getRegisteredAirlinesCount()
                 ) >= 50
             ) {
-                flightSuretyData.registerAirline(airline, msg.sender);
+                flightSuretyData.registerAirline(airline);
 
                 if (flightSuretyData.isAirlineRegistered(airline)) {
-                    emit AirlineRegistered(airline, flightSuretyData.getRegisteredAirlinesCount());
+                    emit AirlineRegistered(
+                        airline,
+                        flightSuretyData.getRegisteredAirlinesCount()
+                    );
                 }
 
                 return (true, airlinesForRegistration[airline].length);
@@ -178,22 +186,18 @@ contract FlightSuretyApp {
     }
 
     function fundAirline(uint256 amount) external {
-        flightSuretyData.fundAirline(msg.sender, amount);
+        flightSuretyData.fund(msg.sender, amount);
 
-        if (flightSuretyData.hasAirlineFunded(msg.sender)) {
+        if (flightSuretyData.isFunded(msg.sender)) {
             emit AirlineFunded(
                 msg.sender,
-                flightSuretyData.airlineContribution(msg.sender)
+                flightSuretyData.getFunds(msg.sender)
             );
         }
     }
 
-    function isAirline(address airline) external view returns (bool) {
-        return flightSuretyData.isAirlineRegistered(airline);
-    }
-
     function isFunded(address airline) external view returns (bool) {
-        return flightSuretyData.hasAirlineFunded(airline);
+        return flightSuretyData.isFunded(airline);
     }
 
     /**

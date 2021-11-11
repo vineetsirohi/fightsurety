@@ -78,7 +78,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     });
 
-    it('(airline) cannot register an Airline using registerAirline() if it is not funded', async () => {
+    it('A registgered airline can register another Airline if numnber of registerd airlines is less than 4', async () => {
 
         // ARRANGE
         let newAirline = accounts[2];
@@ -86,47 +86,27 @@ contract('Flight Surety Tests', async (accounts) => {
         // ACT
         await expectRevert(
             config.flightSuretyApp.registerAirline(newAirline, { from: config.firstAirline }),
-            "Airline has not sufficiently contributed to the funds"
+            "Calling contract is not authorized to access data"
         );
 
-        let result = await config.flightSuretyApp.isAirline.call(newAirline);
+        // authorize app contract to access data contract
+        await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address, { from: accounts[0] });
 
-        // ASSERT
-        assert.equal(result, false, "Airline should not be able to register another airline if it hasn't provided funding");
-
-    });
-
-    it('Can register an Airline if it has contributed funds', async () => {
-
-        // ARRANGE
-        let newAirline = accounts[2];
-
-        // ACT
-        // console.log("First airline: " + config.firstAirline);
-
-        assert.equal(await config.flightSuretyApp.isAirline.call(config.firstAirline), true, "Airline should be registered");
-
-        let amount = web3.utils.toWei('10', 'ether');
-
-
-        let fundResult = await config.flightSuretyApp.fundAirline(amount, { from: config.firstAirline });
-
-        let isFunded = await config.flightSuretyApp.isFunded.call(config.firstAirline);
-        assert.equal(isFunded, true, "Airline should be funded ");
-
+        // Try registering the airline again
         let registerResult = await config.flightSuretyApp.registerAirline(newAirline, { from: config.firstAirline });
 
         let result = await config.flightSuretyApp.isAirline.call(newAirline);
 
         // ASSERT
-        assert.equal(result, true, "Airline should be able to register another airline if it has provided funding");
+        assert.equal(result, true, "A registerd airline should be able to register another airline");
 
-        // EVENTS
-        await expectEvent(fundResult, "AirlineFunded");
         await expectEvent(registerResult, "AirlineRegistered", {
+            airline: newAirline,
             count: "2"
         });
+
     });
+
 
     it('Registration of fifth and subsequent airlines requires multi-party consensus of 50% of registered airlines', async () => {
 
@@ -137,7 +117,6 @@ contract('Flight Surety Tests', async (accounts) => {
         let fifthAirline = accounts[5];
 
         // ACT
-
 
         // three airlines can be registered by the first airline
         await expectRevert(
@@ -156,28 +135,17 @@ contract('Flight Surety Tests', async (accounts) => {
         assert.equal(await config.flightSuretyApp.isAirline.call(fourthAirline), true, "Fourth airline should be registered");
         assert.equal(await config.flightSuretyApp.isAirline.call(fifthAirline), false, "Fifth airline should not be registered");
 
-
-    });
-
-    it('Airline can be registered, but does not participate in contract until it submits funding of 10 ether (make sure it is not 10 wei)', async () => {
-        let amount = web3.utils.toWei('10', 'ether');
-        let secondAirline = accounts[2];
-        let fifthAirline = accounts[5];
-
-        // Airline can be registered, but does not participate in contract until it submits funding of 10 ether
-        await expectRevert(
-            config.flightSuretyApp.registerAirline(fifthAirline, { from: secondAirline }),
-            "Airline has not sufficiently contributed to the funds"
-        );
-
-        // fund second airline and use it to register the fifth airline
-        await config.flightSuretyApp.fundAirline(amount, { from: secondAirline });
+        // Try registering airline from another registerd airline reaching 50% consensus
         let fifthRegistration = await config.flightSuretyApp.registerAirline(fifthAirline, { from: secondAirline });
         assert.equal(await config.flightSuretyApp.isAirline.call(fifthAirline), true, "Fifth airline should be registered");
 
         // EVENTS
         await expectEvent(fifthRegistration, "AirlineRegistered", {
+            airline: fifthAirline,
             count: "5"
         });
+
     });
+
+    
 });
