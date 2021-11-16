@@ -129,7 +129,7 @@ contract FlightSuretyApp {
      *
      */
     function registerAirline(address airline)
-        external
+        public payable
         requireIsOperational
         requireNotAlreadyRegistered(airline)
         returns (bool success, uint256 votes)
@@ -185,8 +185,8 @@ contract FlightSuretyApp {
         }
     }
 
-    function fundAirline(uint256 amount) external {
-        flightSuretyData.fund(msg.sender, amount);
+    function fundAirline() public payable {
+        flightSuretyData.fund(msg.sender, msg.value);
 
         if (flightSuretyData.isFunded(msg.sender)) {
             emit AirlineFunded(
