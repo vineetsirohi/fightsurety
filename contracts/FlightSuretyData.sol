@@ -24,30 +24,18 @@ contract FlightSuretyData {
     uint256 fundedAirlinesCount = 1;
     mapping(address => Airline) private airlines;
 
-    // Flights
-    struct Flight {
-        address airline;
-        string flightNumber;
-        uint256 departureTime;
-        string departureLoc;
-        string arrivalLoc;
-        uint8 statusCode;
-    }
-    mapping(bytes32 => Flight) public flights;
-    bytes32[] public registeredFlights;
-
+    
     // Insurance
     struct FlightInsurance {
-        address passenger;
         uint256 amount;
-        bool isRefunded;
+        bool isCredited;
     }
 
     // Flight Insurance
-    mapping(bytes32 => FlightInsurance[]) public flightInsurances;
+    mapping(bytes32 => FlightInsurance) private flightInsurances; // insurance key to insurance
 
     // Passenger Insurance Claims
-    mapping(address => uint256) public claims;
+    mapping(bytes32 => uint256) public creditedClaims;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -176,40 +164,6 @@ contract FlightSuretyData {
         return airlines[airline].isRegistered;
     }
 
-    function isFunded(address airline) external view returns (bool) {
-        uint256 funds = airlines[airline].funds;
-        return funds >= (10 ether);
-    }
-
-    function getFunds(address airline)
-        external
-        view
-        returns (uint256 amount)
-    {
-        return airlines[airline].funds;
-    }
-
-    function getRegisteredAirlinesCount() external view returns (uint256) {
-        return registeredAirlinesCount;
-    }
-
-    /**
-     * @dev Buy insurance for a flight
-     *
-     */
-    function buy() external payable {}
-
-    /**
-     *  @dev Credits payouts to insurees
-     */
-    function creditInsurees() external pure {}
-
-    /**
-     *  @dev Transfers eligible payout funds to insuree
-     *
-     */
-    function pay() external pure {}
-
     /**
      * @dev Initial funding for the insurance. Unless there are too many delayed flights
      *      resulting in insurance payouts, the contract should be self-sustaining
@@ -222,6 +176,85 @@ contract FlightSuretyData {
         requireRegistered(airline)
     {
         airlines[airline].funds += amount;
+    }
+
+    function isFunded(address airline) external view returns (bool) {
+        uint256 funds = airlines[airline].funds;
+        return funds >= (10 ether);
+    }
+
+    function getFunds(address airline) external view returns (uint256 amount) {
+        return airlines[airline].funds;
+    }
+
+    function getRegisteredAirlinesCount() external view returns (uint256) {
+        return registeredAirlinesCount;
+    }
+
+    
+    /**
+     * @dev Buy insurance for a flight
+     *
+     */
+    function buy(
+        bytes32 flight,
+        address airline,
+        address passenger,
+        uint256 amount
+    ) external requireIsOperational {
+        bool funded = airlines[airline].funds >= 10;
+        require(
+            funded,
+            "Airline you are buying insurance from should have contributed to insurance funds"
+        );
+
+        flightInsurances[getInsuranceKey(passenger, flight)] = FlightInsurance(
+            amount,
+            false
+        );
+        fund(airline, amount);
+    }
+
+    /**
+     *  @dev Credits payouts to insurees
+     */
+    function creditInsurees(address passenger, bytes32 flight) external {
+        require(passenger != address(0), "passenger must be a valid address");
+
+        bytes32 key = getInsuranceKey(passenger, flight);
+        uint256 amount = flightInsurances[key].amount.mul(3).div(2);
+
+        creditedClaims[key] = amount;
+    }
+
+    function creditedAmount(address passenger, bytes32 flight)
+        public
+        view
+        returns (uint256)
+    {
+        return creditedClaims[getInsuranceKey(passenger, flight)];
+    }
+
+    /**
+     *  @dev Transfers eligible payout funds to insuree
+     *
+     */
+    function pay(address passenger, bytes32 flight) external {
+        bytes32 key = getInsuranceKey(passenger, flight);
+        uint256 amount = creditedClaims[key];
+        require(amount > 0, "Credited amount should be greater than zero");
+
+        delete creditedClaims[key];
+
+        payable(passenger).transfer(amount);
+    }
+
+    function getInsuranceKey(address passenger, bytes32 flight)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(passenger, flight));
     }
 
     function getFlightKey(

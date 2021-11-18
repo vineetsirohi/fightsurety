@@ -48,6 +48,9 @@ contract FlightSuretyApp {
     event AirlineRegistered(address airline, uint256 count);
     event AirlineFunded(address airline, uint256 funds);
 
+    event InsurancePurchased(uint256 timestamp, address airline, address passenger, uint256 amount);
+    event PassengerCredited(address passenger, uint256 amount);
+
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -129,7 +132,8 @@ contract FlightSuretyApp {
      *
      */
     function registerAirline(address airline)
-        public payable
+        public
+        payable
         requireIsOperational
         requireNotAlreadyRegistered(airline)
         returns (bool success, uint256 votes)
@@ -200,11 +204,67 @@ contract FlightSuretyApp {
         return flightSuretyData.isFunded(airline);
     }
 
+    function buyInsurance(uint256 timestamp, address airline)
+        external
+        payable
+        requireIsOperational
+    {
+        // Check if amount range is greater than 0 ether and less than 1 ether.
+        require(
+            (msg.value > 0 ether) && (msg.value <= 1 ether),
+            "Insurance amount should be between 0 and 1 ether"
+        );
+
+        bytes32 flight = getFlightKey(timestamp, airline);
+
+        flightSuretyData.buy(flight, airline, msg.sender, msg.value);
+
+        emit InsurancePurchased(timestamp, airline, msg.sender, msg.value);
+    }
+
+    /**
+     *  @dev Transfers eligible payout funds to insuree
+     *
+     */
+    function creditPassenger(uint256 timestamp, address airline)
+        external
+        requireIsOperational
+    {
+        bytes32 flight = getFlightKey(timestamp, airline);
+        uint256 amount = flightSuretyData.creditedAmount(msg.sender, flight);
+        require(amount > 0, "No balance to withdraw");
+
+        flightSuretyData.pay(msg.sender, flight);
+
+        emit PassengerCredited(msg.sender, amount);
+    }
+
     /**
      * @dev Register a future flight for insuring.
      *
      */
-    function registerFlight() external pure {}
+    function registerFlight(uint256 timestamp, address airline)
+        external
+    {
+        bytes32 flight = getFlightKey(timestamp, airline);
+
+        require(!flights[flight].isRegistered, "Flight is already registered");
+
+        flights[flight] = Flight(
+            true,
+            STATUS_CODE_UNKNOWN,
+            timestamp,
+            airline
+        );
+    }
+
+    function getFlightKey(uint256 timestamp, address airline)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(timestamp, airline));
+    }
 
     /**
      * @dev Called after oracle has updated flight status
