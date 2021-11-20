@@ -12,6 +12,11 @@ body {
     padding: 40px;
 }
 
+.section {
+    display: block;
+    margin: 40px 20px;
+}
+
 .top-20 {
     margin-top: 20px;
 }
@@ -31,6 +36,10 @@ section {
 
 .field-value {
     color: #0e7fa8;
+}
+
+.field-value-simple {
+    color: #ff0000;
 }
 
 label.form {

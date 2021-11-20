@@ -24,7 +24,6 @@ contract FlightSuretyData {
     uint256 fundedAirlinesCount = 1;
     mapping(address => Airline) private airlines;
 
-    
     // Insurance
     struct FlightInsurance {
         uint256 amount;
@@ -33,6 +32,7 @@ contract FlightSuretyData {
 
     // Flight Insurance
     mapping(bytes32 => FlightInsurance) private flightInsurances; // insurance key to insurance
+    mapping(bytes32 => address[]) private passengers; // flight key to passengers
 
     // Passenger Insurance Claims
     mapping(bytes32 => uint256) public creditedClaims;
@@ -191,7 +191,6 @@ contract FlightSuretyData {
         return registeredAirlinesCount;
     }
 
-    
     /**
      * @dev Buy insurance for a flight
      *
@@ -208,23 +207,29 @@ contract FlightSuretyData {
             "Airline you are buying insurance from should have contributed to insurance funds"
         );
 
-        flightInsurances[getInsuranceKey(passenger, flight)] = FlightInsurance(
-            amount,
-            false
+        bytes32 insuranceKey = getInsuranceKey(passenger, flight);
+        require(
+            flightInsurances[insuranceKey].amount == 0,
+            "Passenger is already insured"
         );
+
+        flightInsurances[insuranceKey] = FlightInsurance(amount, false);
         fund(airline, amount);
+
+        passengers[flight].push(passenger);
     }
 
     /**
      *  @dev Credits payouts to insurees
      */
-    function creditInsurees(address passenger, bytes32 flight) external {
-        require(passenger != address(0), "passenger must be a valid address");
+    function creditInsurees(bytes32 flight) external {
+        for (uint256 i = 0; i < passengers[flight].length; i++) {
+            address passenger = passengers[flight][i];
+            bytes32 key = getInsuranceKey(passenger, flight);
+            uint256 amount = flightInsurances[key].amount.mul(3).div(2);
 
-        bytes32 key = getInsuranceKey(passenger, flight);
-        uint256 amount = flightInsurances[key].amount.mul(3).div(2);
-
-        creditedClaims[key] = amount;
+            creditedClaims[key] = amount;
+        }
     }
 
     function creditedAmount(address passenger, bytes32 flight)

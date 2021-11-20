@@ -21,7 +21,6 @@ flightSuretyApp.events.OracleRequest({
   console.log(event)
 });
 
-
 async function registerOracles() {
 
   let accounts = await web3.eth.getAccounts();
