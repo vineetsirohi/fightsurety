@@ -12,9 +12,9 @@ body {
     padding: 40px;
 }
 
-.section {
+.section2 {
     display: block;
-    margin: 40px 20px;
+    margin: 20px;
 }
 
 .top-20 {
@@ -46,6 +46,7 @@ label.form {
     font-size: 14px;
     margin-right: 20px;
 }
+
 input {
     margin-right: 30px;
 }

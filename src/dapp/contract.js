@@ -65,40 +65,7 @@ export default class Contract {
 
             callback();
 
-            self.flightSuretyApp.events.AirlineRegistered({
-                fromBlock: 0
-            }, function (error, event) {
-                if (error) console.log(error)
-                console.log("Airline registered event " + JSON.stringify(event.returnValues))
-            });
-
-            self.flightSuretyApp.events.AirlineRegistrationConsensus({
-                fromBlock: 0
-            }, function (error, event) {
-                if (error) console.log(error)
-                console.log("Airline registration consensus event " + JSON.stringify(event.returnValues))
-            });
-
-            self.flightSuretyApp.events.AirlineFunded({
-                fromBlock: 0
-            }, function (error, event) {
-                if (error) console.log(error)
-                console.log("Airline funded event " + JSON.stringify(event.returnValues))
-            });
-
-            self.flightSuretyApp.events.PassengerCredited({
-                fromBlock: 0
-            }, function (error, event) {
-                if (error) console.log(error)
-                console.log("Passenger credited event " + JSON.stringify(event.returnValues))
-            });
-
-            self.flightSuretyApp.events.CreditInsurees({
-                fromBlock: 0
-            }, function (error, event) {
-                if (error) console.log(error)
-                console.log("Credit insurees event " + JSON.stringify(event.returnValues))
-            });
+            
         });
 
 
@@ -113,18 +80,18 @@ export default class Contract {
             .call({ from: self.owner }, callback);
     }
 
-    fetchFlightStatus(flight, callback) {
+    async fetchFlightStatus(airlineAddress, flight, callback) {
         let self = this;
-        console.log("Fetch flight status: " + self.airlines[0]);
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
 
         let payload = {
-            airline: self.airlines[0],
+            airline: airlineAddress,
             flight: flight,
             timestamp: Math.floor(Date.now() / 1000)
         }
         self.flightSuretyApp.methods
             .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
-            .send({ from: self.owner }, (error, result) => {
+            .send({ from: user[0] }, (error, result) => {
                 callback(error, payload);
             });
     }
@@ -145,35 +112,38 @@ export default class Contract {
         }
     }
 
-    fundAirline(airlineAddress, callback) {
+    async fundAirline(callback) {
         let self = this;
         let fee = this.web3.utils.toWei("10", "ether");
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
 
         let payload = {
-            airline: airlineAddress,
+            airline: user[0],
             timestamp: Math.floor(Date.now() / 1000)
         }
 
         self.flightSuretyApp.methods
             .fundAirline()
-            .send({ from: airlineAddress, value: fee }, (error, result) => {
+            .send({ from: user[0], value: fee }, (error, result) => {
                 callback(error, payload);
             });
 
     }
 
-    buyInsurance(airline, amount, callback) {
+    async buyInsurance(flight, airline, amount, callback) {
         let self = this;
-
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
         let fee = this.web3.utils.toWei("" + amount, "ether");
+
         let payload = {
+            flight: flight,
             airline: airline,
             amount: fee,
             timestamp: Math.floor(Date.now() / 1000)
         }
         self.flightSuretyApp.methods
-            .buyInsurance(payload.timestamp, payload.airline)
-            .send({ value: fee }, (error, result) => {
+            .buyInsurance(flight, airline)
+            .send({ from: user[0], value: fee }, (error, result) => {
                 callback(error, payload);
             });
     }
