@@ -23,7 +23,7 @@ import './flightsurety.css';
             contract.fetchFlightStatus(airline, flight, (error, result) => {
                 // display('Oracles', 'Trigger oracles', [{ label: 'Fetch Flight Status', error: error, value: JSON.stringify(result) }]);
                 console.log('Fetch Flight Status: ' + JSON.stringify(error));
-                displaySimple([{ label: 'Fetch Flight Status', error: error, value: result }], "status-display-wrapper");
+                displaySimple([{ label: 'Fetch Flight Status', error: getErrorMessage(error), value: result }], "status-display-wrapper");
             });
         })
 
@@ -32,7 +32,7 @@ import './flightsurety.css';
 
             contract.registerAirline(airlineAddress, (error, result) => {
                 // console.log('Registering airline ' + error.message);
-                displaySimple([{ label: 'Registering airline', error: error.message, value: result }], "registration-display-wrapper");
+                displaySimple([{ label: 'Registering airline', error: getErrorMessage(error), value: result }], "registration-display-wrapper");
             });
         })
 
@@ -41,7 +41,7 @@ import './flightsurety.css';
 
             contract.fundAirline((error, result) => {
                 // displaySimple('Airline', 'fund', [{ label: 'fund airline', error: error, value: result.airline + ' ' + result.timestamp }]);
-                displaySimple([{ label: 'Airline funding result', error: error, value: JSON.stringify(result) }], "funding-display-wrapper");
+                displaySimple([{ label: 'Airline funding result', error: getErrorMessage(error), value: JSON.stringify(result) }], "funding-display-wrapper");
             });
         })
 
@@ -51,11 +51,42 @@ import './flightsurety.css';
             let amount = DOM.elid('insurance-amount').value;
 
             contract.buyInsurance(flight, airlineAddress, amount, (error, result) => {
-                displaySimple([{ label: 'Buy Insurance', error: error, value: JSON.stringify(result) }], "insurance-display-wrapper");
+                displaySimple([{ label: 'Buy Insurance', error: getErrorMessage(error), value: JSON.stringify(result) }], "insurance-display-wrapper");
             });
         })
 
+        DOM.elid('claim-insurance').addEventListener('click', () => {
+            let airlineAddress = DOM.elid('insurance-airline').value;
+            let flight = DOM.elid('insurance-flight').value;
+
+            contract.creditPassenger(flight, airlineAddress, (error, result) => {
+                console.log('Pay passenger insurance money: ' + JSON.stringify(error) + ', result: ' + JSON.stringify(result));
+                displaySimple([{ label: 'Pay passenger insurance money', error: getErrorMessage(error), value: JSON.stringify(result) }], "insurance-display-wrapper");
+            });
+        })
+
+        DOM.elid('check-claim').addEventListener('click', async () => {
+            let airlineAddress = DOM.elid('insurance-airline').value;
+            let flight = DOM.elid('insurance-flight').value;
+
+            let amount = await contract.checkCreditedMoney(flight, airlineAddress);
+            displaySimple([{ label: 'checkCreditedMoney', error: "", value: JSON.stringify(amount) }], "insurance-display-wrapper");
+        })
+
+        DOM.elid('contract-balance').addEventListener('click', async () => {
+            let amount = await contract.getContractBalance();
+            displaySimple([{ label: 'Contract balance', error: "", value: JSON.stringify(amount) }], "contract-display-wrapper");
+        })
+
+        DOM.elid('contract-authorize').addEventListener('click', async () => {
+            let result = await contract.authorizeCaller((error, result) => {
+                displaySimple([{ label: 'Authorize contract', error: getErrorMessage(error), value: JSON.stringify(result) }], "contract-display-wrapper");
+            });
+            
+        })
     });
+
+
 
 
     contract.flightSuretyApp.events.AirlineRegistered({
@@ -63,7 +94,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("Airline registered event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'Airline registered event', error: error, value: JSON.stringify(event.returnValues) }], "registration-display-wrapper");
+        displaySimple([{ label: 'Airline registered event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "registration-display-wrapper");
     });
 
     contract.flightSuretyApp.events.AirlineRegistrationConsensus({
@@ -71,7 +102,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("Airline registration consensus event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'Airline registration consensus event', error: error, value: JSON.stringify(event.returnValues) }], "registration-display-wrapper");
+        displaySimple([{ label: 'Airline registration consensus event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "registration-display-wrapper");
     });
 
     contract.flightSuretyApp.events.AirlineFunded({
@@ -79,7 +110,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("Airline funded event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'Airline funded event', error: error, value: JSON.stringify(event.returnValues) }], "funding-display-wrapper");
+        displaySimple([{ label: 'Airline funded event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "funding-display-wrapper");
     });
 
     contract.flightSuretyApp.events.InsurancePurchased({
@@ -87,7 +118,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("Insurance purchased event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'Insurance purchased event', error: error, value: JSON.stringify(event.returnValues) }], "insurance-display-wrapper");
+        displaySimple([{ label: 'Insurance purchased event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "insurance-display-wrapper");
     });
 
     contract.flightSuretyApp.events.PassengerCredited({
@@ -95,7 +126,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("Passenger credited event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'Passenger credited event', error: error, value: JSON.stringify(event.returnValues) }], "insurance-display-wrapper");
+        displaySimple([{ label: 'Passenger credited event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "insurance-display-wrapper");
     });
 
     contract.flightSuretyApp.events.CreditInsurees({
@@ -103,7 +134,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("Credit insurees event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'Credit insurees event', error: error, value: JSON.stringify(event.returnValues) }], "insurance-display-wrapper");
+        displaySimple([{ label: 'Credit insurees event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "credit-display-wrapper");
     });
 
     contract.flightSuretyApp.events.OracleRequest({
@@ -111,7 +142,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("OracleRequest event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'OracleRequest event', error: error, value: JSON.stringify(event.returnValues) }], "oracle-request-display-wrapper");
+        displaySimple([{ label: 'OracleRequest event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "oracle-request-display-wrapper");
     });
 
     contract.flightSuretyApp.events.OracleReport({
@@ -119,7 +150,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("OracleReport event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'OracleReport event', error: error, value: JSON.stringify(event.returnValues) }], "oracle-report-display-wrapper");
+        displaySimple([{ label: 'OracleReport event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "oracle-report-display-wrapper");
     });
 
     contract.flightSuretyApp.events.FlightStatusInfo({
@@ -127,7 +158,7 @@ import './flightsurety.css';
     }, function (error, event) {
         if (error) console.log(error)
         console.log("FlightStatusInfo event " + JSON.stringify(event.returnValues))
-        displaySimple([{ label: 'FlightStatusInfo event', error: error, value: JSON.stringify(event.returnValues) }], "status-display-wrapper");
+        displaySimple([{ label: 'FlightStatusInfo event', error: getErrorMessage(error), value: JSON.stringify(event.returnValues) }], "status-display-wrapper");
     });
 
 })();
@@ -163,6 +194,16 @@ function displaySimple(results, divId) {
         displayDiv.removeChild(displayDiv.firstChild);
     }
     displayDiv.appendChild(section);
+}
+
+function getErrorMessage(error) {
+    let error2 = error;
+    try {
+        error2 = error.message;
+    } catch (e) {
+
+    }
+    return error2;
 }
 
 

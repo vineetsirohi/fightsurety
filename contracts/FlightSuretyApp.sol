@@ -236,15 +236,30 @@ contract FlightSuretyApp {
      */
     function creditPassenger(string memory flight, address airline)
         external
+        payable
         requireIsOperational
     {
         bytes32 flightKey = getFlightKey(flight, airline);
         uint256 amount = flightSuretyData.creditedAmount(msg.sender, flightKey);
         require(amount > 0, "No balance to withdraw");
 
-        flightSuretyData.pay(msg.sender, flightKey);
+        uint256 credit = flightSuretyData.pay(msg.sender, flightKey);
+        payable(msg.sender).transfer(credit);
 
         emit PassengerCredited(msg.sender, amount);
+    }
+
+    function creditedAmount(string memory flight, address airline)
+        external
+        view
+        returns (uint256)
+    {
+        bytes32 flightKey = getFlightKey(flight, airline);
+        return flightSuretyData.creditedAmount(msg.sender, flightKey);
+    }
+
+    function getContractBalance() external view returns(uint256, uint256){
+        return (address(this).balance, flightSuretyData.getContractBalance());
     }
 
     /**

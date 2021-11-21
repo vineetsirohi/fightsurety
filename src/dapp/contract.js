@@ -40,10 +40,9 @@ export default class Contract {
             console.log("Owner Account: " + self.owner);
 
             try {
-                await this.flightSuretyData.methods.authorizeCaller(self.config.appAddress)
-                    .send({ from: self.owner }, (error, result) => {
-
-                    });
+                self.authorizeCaller((error, result) => {
+                    console.log('Authorize caller: ' + error + ', ' + result);
+                });
             } catch (e) {
 
             }
@@ -65,7 +64,7 @@ export default class Contract {
 
             callback();
 
-            
+
         });
 
 
@@ -148,6 +147,50 @@ export default class Contract {
             });
     }
 
+    async creditPassenger(flight, airline, callback) {
+        let self = this;
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
 
+        self.flightSuretyApp.methods
+            .creditPassenger(flight, airline)
+            .send({ from: user[0] }, (error, result) => {
+                callback(error, result);
+            });
+    }
+
+    async checkCreditedMoney(flight, airline) {
+        let self = this;
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        let amount = await self.flightSuretyApp.methods
+            .creditedAmount(flight, airline)
+            .call({ from: user[0] });
+        return amount;
+    }
+
+    async getContractBalance() {
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        return await this.flightSuretyApp.methods.getContractBalance().call({ from: user[0] });
+    }
+
+    async authorizeCaller(callback) {
+        let self = this;
+        let user = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        if (self.owner != user[0]) {
+            callback({ message: "Error: only owner, " + self.owner + ", of the contract can authorize" }, {});
+        } else {
+            // self.flightSuretyApp.methods
+            // .creditPassenger(flight, airline)
+            // .send({ from: user[0] }, (error, result) => {
+            //     callback(error, result);
+            // });
+
+            self.flightSuretyData.methods.authorizeCaller(self.config.appAddress)
+                .send({ from: user[0] }, (error, result) => {
+                    callback(error, result);
+                });
+        }
+    }
 
 }

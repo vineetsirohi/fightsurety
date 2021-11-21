@@ -244,14 +244,18 @@ contract FlightSuretyData {
      *  @dev Transfers eligible payout funds to insuree
      *
      */
-    function pay(address passenger, bytes32 flight) external {
+    function pay(address passenger, bytes32 flight)
+        external
+        returns (uint256)
+    {
         bytes32 key = getInsuranceKey(passenger, flight);
         uint256 amount = creditedClaims[key];
         require(amount > 0, "Credited amount should be greater than zero");
 
         delete creditedClaims[key];
 
-        payable(passenger).transfer(amount);
+        // payable(address(uint160(address(passenger)))).transfer(amount);
+        return amount;
     }
 
     function getInsuranceKey(address passenger, bytes32 flight)
@@ -280,5 +284,9 @@ contract FlightSuretyData {
 
     receive() external payable {
         // custom function code
+    }
+
+    function getContractBalance() external view returns (uint256) {
+        return address(this).balance;
     }
 }
