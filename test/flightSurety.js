@@ -76,7 +76,7 @@ contract('Flight Surety Tests', async (accounts) => {
         // Set it back for other tests to work
         await config.flightSuretyData.setOperatingStatus(true);
 
-    });
+    }).timeout(20000);
 
     it('A registgered airline can register another Airline if numnber of registerd airlines is less than 4', async () => {
 
